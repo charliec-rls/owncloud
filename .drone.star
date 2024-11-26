@@ -256,6 +256,16 @@ config = {
                 "OCIS_ADD_RUN_SERVICES": "antivirus",
             },
         },
+        "authApp": {
+            "suites": [
+                "apiAuthApp",
+            ],
+            "skip": False,
+            "extraServerEnvironment": {
+                "OCIS_ADD_RUN_SERVICES": "auth-app",
+                "PROXY_ENABLE_APP_AUTH": True,
+            },
+        },
     },
     "apiTests": {
         "numberOfParts": 7,
