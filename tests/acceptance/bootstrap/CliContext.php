@@ -121,6 +121,23 @@ class CliContext implements Context {
 		];
 		$this->featureContext->setResponse(CliHelper::runCommand($body));
 	}
+	
+	/**
+	 * @When the administrator creates app token for user :user with expiration time :expiration using the CLI
+	 *
+	 * @param string $user
+	 * @param string $expiration
+	 *
+	 * @return void
+	 */
+	public function theAdministratorCreatesAppTokenForUserWithExpirationUsingTheCli(string $user, string $expiration): void {
+		$user = $this->featureContext->getActualUserName($user);
+		$command = "auth-app create --user-name=$user --expiration=$expiration";
+		$body = [
+			"command" => $command
+		];
+		$this->featureContext->setResponse(CliHelper::runCommand($body));
+	}
 
 	/**
 	 * @When the administrator removes all the file versions using the CLI
@@ -235,6 +252,22 @@ class CliContext implements Context {
 		} else {
 			Assert::assertStringNotContainsString($output, $jsonResponse["message"]);
 		}
+	}
+
+	/**
+	 * @Then the command output should be :output
+	 *
+	 * @param string $shouldOrNot
+	 * @param string $output
+	 *
+	 * @return void
+	 */
+	public function theCommandOutputShouldBe(string $output): void {
+
+		$response = $this->featureContext->getResponse();
+		$jsonResponse = $this->featureContext->getJsonDecodedResponse($response);
+		$output = $this->featureContext->substituteInLineCodes($output);
+		Assert::assertMatchesRegularExpression("/$output/", $jsonResponse["message"]);
 	}
 
 	/**

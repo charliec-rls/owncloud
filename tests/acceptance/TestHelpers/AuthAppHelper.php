@@ -2,11 +2,8 @@
 /**
  * ownCloud
  *
-<<<<<<< HEAD
  * @author Sajan Gurung <sajan@jankaritech.com>
  * @copyright Copyright (c) 2024 Sajan Gurung sajan@jankaritech.com
-=======
->>>>>>> 8a06712ccc (add test for creating auth tocken for an app using api)
  *
  * This code is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License,
@@ -46,11 +43,7 @@ class AuthAppHelper {
 	 *
 	 * @return ResponseInterface
 	 */
-<<<<<<< HEAD
 	public static function listAllAppAuthToken(string $baseUrl, string $user, string $password) : ResponseInterface {
-=======
-	public static function listAllAppAuthToken(string $baseUrl,string $user,string $password) : ResponseInterface {
->>>>>>> 8a06712ccc (add test for creating auth tocken for an app using api)
 		$url = $baseUrl . self::getAuthAppEndpoint();
 		return HttpRequestHelper::sendRequest(
 			$url,
@@ -69,11 +62,7 @@ class AuthAppHelper {
 	 *
 	 * @return ResponseInterface
 	 */
-<<<<<<< HEAD
 	public static function createAppAuthToken(string $baseUrl, string $user, string $password, string $expiration) : ResponseInterface {
-=======
-	public static function createAppAuthToken(string $baseUrl,string $user,string $password,string $expiration) : ResponseInterface {
->>>>>>> 8a06712ccc (add test for creating auth tocken for an app using api)
 		$url = $baseUrl . self::getAuthAppEndpoint() . "?expiry=$expiration";
 		return HttpRequestHelper::sendRequest(
 			$url,
@@ -102,4 +91,12 @@ class AuthAppHelper {
 			$password,
 		);
 	}
+
+	/**
+	 * @return string
+	 */
+	public static function getCreatedTokenRegex() : string {
+		return "[a-zA-Z0-9]{16}";
+	}
+
 }
