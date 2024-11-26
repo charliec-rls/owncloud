@@ -2,9 +2,12 @@
 /**
  * ownCloud
  *
+<<<<<<< HEAD
  * @author Sajan Gurung <sajan@jankaritech.com>
  * @copyright Copyright (c) 2024 Sajan Gurung sajan@jankaritech.com
  *
+=======
+>>>>>>> 8a06712ccc (add test for creating auth tocken for an app using api)
  * This code is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License,
  * as published by the Free Software Foundation;
