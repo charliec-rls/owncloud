@@ -1769,6 +1769,9 @@ class SharingNgContext implements Context {
 	 * @param string $shouldOrNot
 	 *
 	 * @return void
+	 * @throws GuzzleException
+	 * @throws JsonException
+	 * @throws Exception
 	 */
 	public function checkIfShareExists(string $share, string $sharee, string $sharer, string $shouldOrNot): void {
 		// check share mountpoint

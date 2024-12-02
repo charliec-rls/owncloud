@@ -5256,11 +5256,11 @@ Feature: an user gets the resources shared to them
     And user "Alice" has created a space "NewSpace" with the default quota using the Graph API
     And user "Alice" has created a folder "FolderToShare" in space "NewSpace"
     And user "Alice" has sent the following resource share invitation:
-      | resource        | FolderToShare      |
-      | space           | NewSpace           |
-      | sharee          | Brian              |
-      | shareType       | user               |
-      | permissionsRole | Denied             |
+      | resource        | FolderToShare |
+      | space           | NewSpace      |
+      | sharee          | Brian         |
+      | shareType       | user          |
+      | permissionsRole | Denied        |
     When user "Brian" lists the shares shared with him using the Graph API
     Then the HTTP status code should be "200"
     And user "Brian" should not have a share "FolderToShare" shared by user "Alice"
@@ -5272,10 +5272,10 @@ Feature: an user gets the resources shared to them
     And user "Alice" has uploaded file with content "secure content" to "fileToShare.txt"
     And user "Alice" has sent the following resource share invitation:
       | resource        | fileToShare.txt |
-      | space           | Personal      |
-      | sharee          | Brian         |
-      | shareType       | user          |
-      | permissionsRole | Denied        |
+      | space           | Personal        |
+      | sharee          | Brian           |
+      | shareType       | user            |
+      | permissionsRole | Denied          |
     When user "Brian" lists the shares shared with him using the Graph API
     Then the HTTP status code should be "200"
     And user "Brian" should not have a share "FolderToShare" shared by user "Alice"
@@ -5288,11 +5288,107 @@ Feature: an user gets the resources shared to them
     And user "Alice" has created a space "NewSpace" with the default quota using the Graph API
     And user "Alice" has uploaded a file inside space "NewSpace" with content "some content" to "insideSpace.txt"
     And user "Alice" has sent the following resource share invitation:
-      | resource        | insideSpace.txt      |
-      | space           | NewSpace           |
-      | sharee          | Brian              |
-      | shareType       | user               |
-      | permissionsRole | Denied             |
+      | resource        | insideSpace.txt |
+      | space           | NewSpace        |
+      | sharee          | Brian           |
+      | shareType       | user            |
+      | permissionsRole | Denied          |
     When user "Brian" lists the shares shared with him using the Graph API
     Then the HTTP status code should be "200"
     And user "Brian" should not have a share "FolderToShare" shared by user "Alice"
+
+  @env-config
+  Scenario Outline: changing the permission role to "denied" after sharing a folder (Personal Space)
+    Given using spaces DAV path
+    And the administrator has enabled the permissions role "Denied"
+    And user "Alice" has created folder "FolderToShare"
+    And user "Alice" has sent the following resource share invitation:
+      | resource        | FolderToShare      |
+      | space           | Personal           |
+      | sharee          | Brian              |
+      | shareType       | user               |
+      | permissionsRole | <permissions-role> |
+    And user "Alice" has updated the last resource share with the following properties:
+      | permissionsRole | Denied        |
+      | space           | Personal      |
+      | resource        | FolderToShare |
+    When user "Brian" lists the shares shared with him using the Graph API
+    Then the HTTP status code should be "200"
+    And user "Brian" should not have a share "FolderToShare" shared by user "Alice"
+    Examples:
+      | permissions-role |
+      | Editor           |
+      | Viewer           |
+
+  @env-config
+  Scenario Outline: changing the permissions role to "denied" before sharing a folder (Personal Space)
+    Given using spaces DAV path
+    And the administrator has enabled the permissions role "Denied"
+    And user "Alice" has created folder "FolderToShare"
+    And user "Alice" has sent the following resource share invitation:
+      | resource        | FolderToShare |
+      | space           | Personal      |
+      | sharee          | Brian         |
+      | shareType       | user          |
+      | permissionsRole | Denied        |
+    And user "Alice" has updated the last resource share with the following properties:
+      | permissionsRole | <permissions-role> |
+      | space           | Personal           |
+      | resource        | FolderToShare      |
+    When user "Brian" lists the shares shared with him using the Graph API
+    Then the HTTP status code should be "200"
+    And user "Brian" should have a share "FolderToShare" shared by user "Alice"
+    Examples:
+      | permissions-role |
+      | Editor           |
+      | Viewer           |
+
+  @env-config
+  Scenario Outline: changing the permission role to "denied" after sharing a folder (Project Space)
+    Given using spaces DAV path
+    And the administrator has enabled the permissions role "Denied"
+    And the administrator has assigned the role "Space Admin" to user "Alice" using the Graph API
+    And user "Alice" has created a space "NewSpace" with the default quota using the Graph API
+    And user "Alice" has created a folder "FolderToShare" in space "NewSpace"
+    And user "Alice" has sent the following resource share invitation:
+      | resource        | FolderToShare      |
+      | space           | NewSpace           |
+      | sharee          | Brian              |
+      | shareType       | user               |
+      | permissionsRole | <permissions-role> |
+    And user "Alice" has updated the last resource share with the following properties:
+      | permissionsRole | Denied        |
+      | space           | NewSpace      |
+      | resource        | FolderToShare |
+    When user "Brian" lists the shares shared with him using the Graph API
+    Then the HTTP status code should be "200"
+    And user "Brian" should not have a share "FolderToShare" shared by user "Alice"
+    Examples:
+      | permissions-role |
+      | Editor           |
+      | Viewer           |
+
+  @env-config
+  Scenario Outline: changing the permissions role to "denied" before sharing a folder (Project Space)
+    Given using spaces DAV path
+    And the administrator has enabled the permissions role "Denied"
+    And the administrator has assigned the role "Space Admin" to user "Alice" using the Graph API
+    And user "Alice" has created a space "NewSpace" with the default quota using the Graph API
+    And user "Alice" has created a folder "FolderToShare" in space "NewSpace"
+    And user "Alice" has sent the following resource share invitation:
+      | resource        | FolderToShare |
+      | space           | NewSpace      |
+      | sharee          | Brian         |
+      | shareType       | user          |
+      | permissionsRole | Denied        |
+    And user "Alice" has updated the last resource share with the following properties:
+      | permissionsRole | <permissions-role> |
+      | space           | NewSpace           |
+      | resource        | FolderToShare      |
+    When user "Brian" lists the shares shared with him using the Graph API
+    Then the HTTP status code should be "200"
+    And user "Brian" should have a share "FolderToShare" shared by user "Alice"
+    Examples:
+      | permissions-role |
+      | Editor           |
+      | Viewer           |
