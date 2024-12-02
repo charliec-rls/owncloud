@@ -1766,13 +1766,11 @@ class SharingNgContext implements Context {
 	 * @param string $share
 	 * @param string $sharee
 	 * @param string $sharer
+	 * @param string $shouldOrNot
 	 *
 	 * @return void
-	 * @throws GuzzleException
-	 * @throws JsonException
-	 * @throws Exception
 	 */
-	public function checkIfShareExists(string $share, string $sharee, string $sharer): void {
+	public function checkIfShareExists(string $share, string $sharee, string $sharer, string $shouldOrNot): void {
 		// check share mountpoint
 		$response = GraphHelper::getMySpaces(
 			$this->featureContext->getBaseUrl(),
@@ -1788,7 +1786,6 @@ class SharingNgContext implements Context {
 				$foundShareMountpoint = true;
 			}
 		}
-		Assert::assertTrue($foundShareMountpoint, "Share mountpoint '$share' was not found in the drives list.");
 
 		// check share in shared-with-me list
 		$response = GraphHelper::getSharesSharedWithMe(
@@ -1804,20 +1801,28 @@ class SharingNgContext implements Context {
 				$foundShareInSharedWithMe = true;
 			}
 		}
-		Assert::assertTrue($foundShareInSharedWithMe, "Share '$share' was not found in the shared-with-me list");
+
+		if ($shouldOrNot === "should not") {
+			Assert::assertFalse($foundShareMountpoint, "Share mountpoint '$share' was found in the drives list");
+			Assert::assertFalse($foundShareInSharedWithMe, "Share '$share' was found in the shared-with-me list");
+		} else {
+			Assert::assertTrue($foundShareMountpoint, "Share mountpoint '$share' was not found in the drives list");
+			Assert::assertTrue($foundShareInSharedWithMe, "Share '$share' was not found in the shared-with-me list");
+		}
 	}
 
 	/**
-	 * @Then user :sharee should have a share :share shared by user :sharer
+	 * @Then /^user "([^"]*)" (should|should not) have a share "([^"]*)" shared by user "([^"]*)"$/
 	 *
 	 * @param string $sharee
+	 * @param string $shouldOrNot
 	 * @param string $share
 	 * @param string $sharer
 	 *
 	 * @return void
 	 */
-	public function userShouldHaveShare(string $sharee, string $share, string $sharer): void {
-		$this->checkIfShareExists($share, $sharee, $sharer);
+	public function userShouldHaveShare(string $sharee, string $shouldOrNot, string $share, string $sharer): void {
+		$this->checkIfShareExists($share, $sharee, $sharer, $shouldOrNot);
 	}
 
 	/**
