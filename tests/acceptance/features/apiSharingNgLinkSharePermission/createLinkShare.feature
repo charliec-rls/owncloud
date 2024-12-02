@@ -2764,3 +2764,119 @@ Feature: Create a link share for a resource
       | Space Viewer     |
       | Space Editor     |
       | Manager          |
+
+#  Scenario: create a link share of a file inside project-space using permissions endpoint
+#    Given using spaces DAV path
+#    And the administrator has assigned the role "Space Admin" to user "Alice" using the Graph API
+#    And user "Alice" has created a space "projectSpace" with the default quota using the Graph API
+#    When the public uploads file "filesForUpload/zerobyte.txt" to "Shares/testFolder/textfile.txt" inside last link shared folder using the public WebDAV API
+#    And user "Alice" has sent the following space share invitation:
+#      | space           | projectSpace   |
+#      | sharee          | Alice        |
+#      | shareType       | user         |
+#      | permissionsRole | Uploader |
+#
+#
+#  Scenario: public uploads a file with the virus to a public share
+#    Given using spaces DAV path
+##    And the config "OCIS_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD" has been set to "false"
+#    And using SharingNG
+#    And user "Alice" has created folder "/uploadFolder"
+#    When user "Alice" creates the following resource link share using the Graph API:
+#      | resource        | textfile.txt       |
+#      | space           | projectSpace       |
+#      | permissionsRole | Uploader |
+#      | password        | %public%           |
+#    When the public uploads file "filesForUpload/zerobyte.txt" to "Shares/testFolder/textfile.txt" inside last link shared folder using the public WebDAV API
+#    Then the HTTP status code should be "201"
+#    And user "Alice" should get a notification with subject "Virus found" and message:
+#      | message                                                                          |
+#      | Virus found in <new-file-name>. Upload not possible. Virus: Win.Test.EICAR_HDB-1 |
+#    And as "Alice" file "/uploadFolder/<new-file-name>" should not exist
+
+#  Scenario: upload a file with zerobyte to a shared project space
+#    Given using spaces DAV path
+#    And the administrator has assigned the role "Space Admin" to user "Alice" using the Graph API
+#    And user "Alice" has created a space "new-space" with the default quota using the Graph API
+#    And user "Alice" has created the following space link share:
+#      | space           | new-space  |
+#      | permissionsRole | createOnly |
+#      | password        | %public%   |
+#    And using SharingNG
+#    When the public creates a file "simple.txt" inside the last shared public link folder with password "%public%" using wopi endpoint
+#    When the public tries to create a file "simple.odt" inside folder "testFolder" in the last shared public link space with password "%public%" using wopi endpoint
+#    When the public uploads file "filesForUpload/zerobyte.txt" to "Shares/textfile.txt" inside last link shared folder using the public WebDAV API
+
+#    When the public uploads file "lorem.txt" with password "%public%" and content "" using the public WebDAV API
+#
+#    When the public uploads file "test.txt" with content "" using the public WebDAV API
+#
+#
+#    When the public uploads file "lorem.txt" with password "%public%" and content "test" using the public WebDAV API
+
+
+#    And for user "Alice" folder "testFolder" of the space "new-space" should contain these files:
+#      | simple.odt |
+
+
+#    And user "Brian" should get a notification with subject "Virus found" and message:
+#      | message                                                                          |
+#      | Virus found in <new-file-name>. Upload not possible. Virus: Win.Test.EICAR_HDB-1 |
+#    And for user "Brian" the space "new-space" should not contain these entries:
+#      | /<new-file-name> |
+#    And for user "Alice" the space "new-space" should not contain these entries:
+#      | /<new-file-name> |
+#    Examples:
+#      | file-name     | new-file-name  |
+#      | eicar.com     | virusFile1.txt |
+#      | eicar_com.zip | virusFile2.zip |
+
+
+#  Scenario: upload a file with zerobyte to a shared project space
+#    Given using spaces DAV path
+#    And the administrator has assigned the role "Space Admin" to user "Alice" using the Graph API
+#    And user "Alice" has created a space "new-space" with the default quota using the Graph API
+#    And user "Alice" has created the following space link share:
+#      | space           | new-space  |
+#      | permissionsRole | createOnly |
+#      | password        | %public%   |
+#    And using SharingNG
+#    When the public uploads file "lorem.txt" with password "%public%" and content "" using the public WebDAV API
+#
+#  Scenario: upload a file with zerobyte to a shared project space
+#    Given using spaces DAV path
+#    And the administrator has assigned the role "Space Admin" to user "Alice" using the Graph API
+#    And user "Alice" has created a space "new-space" with the default quota using the Graph API
+#    And user "Alice" has created the following space link share:
+#      | space           | new-space  |
+#      | permissionsRole | createOnly |
+#      | password        | %public%   |
+#    And using SharingNG
+#    When the public creates a file "simple.txt" inside the last shared public link folder with password "%public%" using wopi endpoint
+#    When the public tries to create a file "simple.odt" inside folder "testFolder" in the last shared public link space with password "%public%" using wopi endpoint
+#    When the public uploads file "filesForUpload/zerobyte.txt" to "Shares/textfile.txt" inside last link shared folder using the public WebDAV API
+
+#
+#    When the public uploads file "lorem.txt" with password "%public%" and content "" using the public WebDAV API
+#
+#    When the public uploads file "test.txt" with content "" using the public WebDAV API
+#
+#
+#    When the public uploads file "lorem.txt" with password "%public%" and content "test" using the public WebDAV API
+
+
+  @issue-10649
+  Scenario: public uploads a zero byte file to a password-protected public share
+    Given using spaces DAV path
+    And using SharingNG
+    And user "Alice" has created folder "/uploadFolder"
+    And user "Alice" has created the following resource link share:
+      | resource        | uploadFolder |
+      | space           | Personal     |
+      | permissionsRole | createOnly   |
+      | password        | %public%     |
+    When the public uploads file "filesForUpload/zerobyte.txt" to "textfile.txt" inside last link shared folder with password "%public%" using the public WebDAV API
+    Then the HTTP status code should be "201"
+    And the following headers should be set
+      | header                        | value    |
+      | Access-Control-Expose-Headers | Location |
