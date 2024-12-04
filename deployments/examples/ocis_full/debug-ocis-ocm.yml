@@ -1,9 +1,9 @@
 ---
 services:
 
-  ocis:
+  ocis-ocm:
     command: [ "-c", "ocis init || true; dlv --listen=:40000 --headless=true --continue --check-go-version=false --api-version=2 --accept-multiclient exec /usr/bin/ocis server" ]
     environment:
       OCIS_LOG_LEVEL: debug
     ports:
-      - 40000:40000
+      - 40004:40000
