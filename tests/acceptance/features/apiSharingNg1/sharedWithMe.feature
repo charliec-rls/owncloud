@@ -5274,3 +5274,72 @@ Feature: an user gets the resources shared to them
       | resource      |
       | FolderToShare |
       | textfile.txt  |
+
+  @env-config
+  Scenario: list all drives after sharing a resource with denied permission role
+    Given using spaces DAV path
+    And the administrator has enabled the permissions role "Denied"
+    And user "Alice" has created folder "FolderToShare"
+    And user "Alice" has uploaded file with content "personal space" to "textfile.txt"
+    And user "Alice" has sent the following resource share invitation:
+      | resource        | textfile.txt |
+      | space           | Personal   |
+      | sharee          | Brian      |
+      | shareType       | user       |
+      | permissionsRole | Denied     |
+    When user "Brian" lists all spaces via the Graph API
+    Then the HTTP status code should be "200"
+    And the JSON response should contain space called "Brian Murphy" and match
+      """
+      {
+        "type": "object",
+        "required": [
+          "driveType",
+          "name",
+          "id"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["Brian Murphy"]
+          },
+          "driveType": {
+            "type": "string",
+            "enum": ["personal"]
+          },
+          "id": {
+            "type": "string",
+            "enum": ["%space_id%"]
+          }
+        }
+      }
+      """
+    And the json responded should not contain a space with name "Alice Hansen"
+    When user "Alice" lists all spaces via the Graph API
+    Then the HTTP status code should be "200"
+    And the JSON response should contain space called "Alice Hansen" and match
+      """
+      {
+        "type": "object",
+        "required": [
+          "driveType",
+          "name",
+          "id"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["Alice Hansen"]
+          },
+          "driveType": {
+            "type": "string",
+            "enum": ["personal"]
+          },
+          "id": {
+            "type": "string",
+            "enum": ["%space_id%"]
+          }
+        }
+      }
+      """
+    And the json responded should not contain a space with name "Brian Murphy"
