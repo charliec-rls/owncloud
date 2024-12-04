@@ -520,23 +520,26 @@ class WebDavHelper {
 		if (\array_key_exists($user, self::$spacesIdRef) && \array_key_exists("personal", self::$spacesIdRef[$user])) {
 			return self::$spacesIdRef[$user]["personal"];
 		}
-		$trimmedBaseUrl = \trim($baseUrl, "/");
-		$drivesPath = '/graph/v1.0/me/drives';
-		$fullUrl = $trimmedBaseUrl . $drivesPath;
-		$response = HttpRequestHelper::get(
-			$fullUrl,
-			$xRequestId,
-			$user,
-			$password
-		);
-		Assert::assertEquals(200, $response->getStatusCode(), "Cannot list drives for user '$user'");
 
+		$trimmedBaseUrl = \trim($baseUrl, "/");
 		$personalSpaceId = '';
-		$drives = HttpRequestHelper::getJsonDecodedResponseBodyContent($response);
-		foreach ($drives->value as $drive) {
-			if ($drive->driveType === "personal") {
-				$personalSpaceId = $drive->id;
-				break;
+		if (!OcisHelper::isTestingOnReva()) {
+			$drivesPath = '/graph/v1.0/me/drives';
+			$fullUrl = $trimmedBaseUrl . $drivesPath;
+			$response = HttpRequestHelper::get(
+				$fullUrl,
+				$xRequestId,
+				$user,
+				$password
+			);
+			Assert::assertEquals(200, $response->getStatusCode(), "Cannot list drives for user '$user'");
+
+			$drives = HttpRequestHelper::getJsonDecodedResponseBodyContent($response);
+			foreach ($drives->value as $drive) {
+				if ($drive->driveType === "personal") {
+					$personalSpaceId = $drive->id;
+					break;
+				}
 			}
 		}
 
