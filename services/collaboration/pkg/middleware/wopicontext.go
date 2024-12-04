@@ -12,10 +12,13 @@ import (
 	"time"
 
 	appproviderv1beta1 "github.com/cs3org/go-cs3apis/cs3/app/provider/v1beta1"
+	auth "github.com/cs3org/go-cs3apis/cs3/auth/provider/v1beta1"
 	providerv1beta1 "github.com/cs3org/go-cs3apis/cs3/storage/provider/v1beta1"
 	ctxpkg "github.com/cs3org/reva/v2/pkg/ctx"
 	rjwt "github.com/cs3org/reva/v2/pkg/token/manager/jwt"
+	"github.com/cs3org/reva/v2/pkg/utils"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang/protobuf/proto"
 	"github.com/owncloud/ocis/v2/services/collaboration/pkg/config"
 	"github.com/owncloud/ocis/v2/services/collaboration/pkg/helpers"
 	"github.com/rs/zerolog"
@@ -36,6 +39,21 @@ type WopiContext struct {
 	FileReference     *providerv1beta1.Reference
 	TemplateReference *providerv1beta1.Reference
 	ViewMode          appproviderv1beta1.ViewMode
+	scope             map[string]*auth.Scope
+}
+
+// GetScope returns the scope from the WopiContext
+func (w *WopiContext) GetScope(keyPrefix string, m proto.Message) error {
+	for k, v := range w.scope {
+		if strings.HasPrefix(k, keyPrefix) && v.Resource.Decoder == "json" {
+			err := utils.UnmarshalJSONToProtoV1(v.Resource.Value, m)
+			if err != nil {
+				return fmt.Errorf("can't unmarshal public share from scope: %w", err)
+			}
+			break
+		}
+	}
+	return nil
 }
 
 // WopiContextAuthMiddleware will prepare an HTTP handler to be used as
@@ -120,13 +138,15 @@ func WopiContextAuthMiddleware(cfg *config.Config, st microstore.Store, next htt
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		user, _, err := tokenManager.DismantleToken(ctx, wopiContextAccessToken)
+		user, scope, err := tokenManager.DismantleToken(ctx, wopiContextAccessToken)
 		if err != nil {
 			wopiLogger.Error().Err(err).Msg("failed to dismantle reva token manager")
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
+
 		claims.WopiContext.AccessToken = wopiContextAccessToken
+		claims.WopiContext.scope = scope
 
 		ctx = context.WithValue(ctx, wopiContextKey, claims.WopiContext)
 		// authentication for the CS3 api
