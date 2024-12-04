@@ -68,8 +68,6 @@ trait WebDav {
 
 	private int $httpRequestTimeout = 0;
 
-	private ?int $chunkingToUse = null;
-
 	/**
 	 * The ability to do requests with depth infinity is disabled by default.
 	 * This remembers when the setting dav.propfind.depth_infinity has been
@@ -1636,10 +1634,6 @@ trait WebDav {
 		?array $headers = [],
 		?int $noOfChunks = 0
 	):void {
-		$chunkingVersion = $this->chunkingToUse;
-		if ($noOfChunks <= 0) {
-			$chunkingVersion = null;
-		}
 		try {
 			$this->pauseUploadDelete();
 			$this->response = UploadHelper::upload(
@@ -1651,7 +1645,6 @@ trait WebDav {
 				$this->getStepLineRef(),
 				$headers,
 				$this->getDavPathVersion(),
-				$chunkingVersion,
 				$noOfChunks
 			);
 			$this->lastUploadDeleteTime = \time();
@@ -1686,9 +1679,6 @@ trait WebDav {
 			"What does it mean to have $noOfChunks chunks?"
 		);
 
-		// use chunking version 1 as default, since version 2 uses "remote.php/dav/uploads" endpoint and it doesn't exist in oCIS
-		$this->chunkingToUse = 1;
-
 		if ($async === true) {
 			$headers['OC-LazyOps'] = 'true';
 		}
@@ -1707,7 +1697,7 @@ trait WebDav {
 	 * Except do not do the new-DAV-new-chunking combination. That is not being
 	 * supported on all implementations.
 	 *
-	 * @When user :user uploads file :source to filenames based on :destination with all mechanisms except new chunking using the WebDAV API
+	 * @When user :user uploads file :source to filenames based on :destination with all mechanisms using the WebDAV API
 	 *
 	 * @param string $user
 	 * @param string $source
@@ -1715,6 +1705,7 @@ trait WebDav {
 	 *
 	 * @return void
 	 * @throws Exception
+	 * @throws GuzzleException
 	 */
 	public function userUploadsAFileToWithAllMechanismsExceptNewChunking(
 		string $user,
@@ -1730,7 +1721,6 @@ trait WebDav {
 			$destination,
 			$this->getStepLineRef(),
 			false,
-			'new'
 		);
 	}
 
@@ -2203,7 +2193,6 @@ trait WebDav {
 			$this->getStepLineRef(),
 			["X-OC-Mtime" => $mtime],
 			$this->getDavPathVersion(),
-			null,
 			1,
 			$isGivenStep
 		);
@@ -2238,7 +2227,6 @@ trait WebDav {
 			$this->getStepLineRef(),
 			["X-OC-Mtime" => $mtime],
 			$this->getDavPathVersion(),
-			null,
 			1,
 			true
 		);
