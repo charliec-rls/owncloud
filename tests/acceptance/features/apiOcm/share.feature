@@ -814,3 +814,45 @@ Feature: an user shares resources using ScienceMesh application
     And for user "Brian" the content of file "textfile.txt" of federated share "textfile.txt" should be "this is a new content"
     And using server "LOCAL"
     And for user "Alice" the content of the file "textfile.txt" of the space "Personal" should be "this is a new content"
+
+  @issue-10213
+  Scenario: local user deletes access of shared resource to federated user
+    Given using spaces DAV path
+    And using server "REMOTE"
+    And "Brian" has created the federation share invitation
+    And using server "LOCAL"
+    And "Alice" has accepted invitation
+    And user "Alice" has created a folder "FOLDER" in space "Personal"
+    And user "Alice" has sent the following resource share invitation to federated user:
+      | resource        | FOLDER   |
+      | space           | Personal |
+      | sharee          | Brian    |
+      | shareType       | user     |
+      | permissionsRole | Editor   |
+    When user "Alice" removes the access of user "Brian" from resource "FOLDER" of space "Personal" using the Graph API
+    Then the HTTP status code should be "204"
+    When using server "REMOTE"
+    And user "Brian" lists the shares shared with him without retry using the Graph API
+    Then the HTTP status code should be "200"
+    And user "Brian" should have a share "FOLDER" shared by user "Alice"
+
+  @issue-10213
+  Scenario: federation user deletes access of shared resource to local user
+    Given using spaces DAV path
+    And using server "LOCAL"
+    And "Alice" has created the federation share invitation
+    And using server "REMOTE"
+    And "Brian" has accepted invitation
+    And user "Brian" has created a folder "FOLDER" in space "Personal"
+    And user "Brian" has sent the following resource share invitation to federated user:
+      | resource        | FOLDER   |
+      | space           | Personal |
+      | sharee          | Alice    |
+      | shareType       | user     |
+      | permissionsRole | Editor   |
+    When user "Brian" removes the access of user "Alice" from resource "FOLDER" of space "Personal" using the Graph API
+    Then the HTTP status code should be "204"
+    When using server "LOCAL"
+    And user "Alice" lists the shares shared with her without retry using the Graph API
+    Then the HTTP status code should be "200"
+    And user "Alice" should not have a share "FOLDER" shared by user "Brian"
