@@ -2435,7 +2435,15 @@ class FeatureContext extends BehatVariablesContext {
 					"getXRequestIdRegex"
 				],
 				"parameter" => []
-			]
+			],
+			[
+				"code" => "%created_app_token%",
+				"function" => [
+					__NAMESPACE__ . '\TestHelpers\AuthAppHelper',
+					"getCreatedTokenRegex"
+				],
+				"parameter" => []
+			],
 		];
 		if ($user !== null) {
 			array_push(

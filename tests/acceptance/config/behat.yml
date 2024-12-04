@@ -439,6 +439,15 @@ default:
         - TrashbinContext:
         - SpacesTUSContext:
 
+    apiAuthApp:
+      paths:
+        - "%paths.base%/../features/apiAuthApp"
+      context: *common_ldap_suite_context
+      contexts:
+        - FeatureContext: *common_feature_context_params
+        - OcisConfigContext:
+        - AuthAppContext:
+
     coreApiMain:
       paths:
         - "%paths.base%/../features/coreApiMain"
