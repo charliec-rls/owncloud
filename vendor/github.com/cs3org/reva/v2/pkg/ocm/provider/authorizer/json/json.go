@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -113,7 +114,20 @@ func (a *authorizer) GetInfoByDomain(_ context.Context, domain string) (*ocmprov
 		return nil, err
 	}
 	for _, p := range a.providers {
+		// we can exit early if this an exact match
 		if strings.Contains(p.Domain, normalizedDomain) {
+			return p, nil
+		}
+
+		// check if the domain matches a regex
+		if ok, err := regexp.MatchString(p.Domain, normalizedDomain); ok && err == nil {
+			// overwrite wildcards with the actual domain
+			for i, s := range p.Services {
+				s.Endpoint.Path = strings.ReplaceAll(s.Endpoint.Path, p.Domain, normalizedDomain)
+				s.Host = strings.ReplaceAll(s.Host, p.Domain, normalizedDomain)
+				p.Services[i] = s
+			}
+			p.Domain = normalizedDomain
 			return p, nil
 		}
 	}
@@ -130,7 +144,7 @@ func (a *authorizer) IsProviderAllowed(ctx context.Context, pi *ocmprovider.Prov
 	var providerAuthorized bool
 	if normalizedDomain != "" {
 		for _, p := range a.providers {
-			if p.Domain == normalizedDomain {
+			if ok, err := regexp.MatchString(p.Domain, normalizedDomain); ok && err == nil {
 				providerAuthorized = true
 				break
 			}
