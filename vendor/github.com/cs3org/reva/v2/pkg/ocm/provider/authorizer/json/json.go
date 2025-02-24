@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -113,8 +114,40 @@ func (a *authorizer) GetInfoByDomain(_ context.Context, domain string) (*ocmprov
 		return nil, err
 	}
 	for _, p := range a.providers {
+		// we can exit early if this an exact match
 		if strings.Contains(p.Domain, normalizedDomain) {
 			return p, nil
+		}
+
+		// check if the domain matches a regex
+		if ok, err := regexp.MatchString(p.Domain, normalizedDomain); ok && err == nil {
+			// overwrite wildcards with the actual domain
+			var services []*ocmprovider.Service
+			for _, s := range p.Services {
+				services = append(services, &ocmprovider.Service{
+					Host: strings.ReplaceAll(s.Host, p.Domain, normalizedDomain),
+					Endpoint: &ocmprovider.ServiceEndpoint{
+						Type:        s.Endpoint.Type,
+						Name:        s.Endpoint.Name,
+						Path:        strings.ReplaceAll(s.Endpoint.Path, p.Domain, normalizedDomain),
+						IsMonitored: s.Endpoint.IsMonitored,
+						Properties:  s.Endpoint.Properties,
+					},
+					ApiVersion:          s.ApiVersion,
+					AdditionalEndpoints: s.AdditionalEndpoints,
+				})
+			}
+			return &ocmprovider.ProviderInfo{
+				Name:         p.Name,
+				FullName:     p.FullName,
+				Description:  p.Description,
+				Organization: p.Organization,
+				Domain:       normalizedDomain,
+				Homepage:     p.Homepage,
+				Email:        p.Email,
+				Services:     services,
+				Properties:   p.Properties,
+			}, nil
 		}
 	}
 	return nil, errtypes.NotFound(domain)
@@ -130,7 +163,7 @@ func (a *authorizer) IsProviderAllowed(ctx context.Context, pi *ocmprovider.Prov
 	var providerAuthorized bool
 	if normalizedDomain != "" {
 		for _, p := range a.providers {
-			if p.Domain == normalizedDomain {
+			if ok, err := regexp.MatchString(p.Domain, normalizedDomain); ok && err == nil {
 				providerAuthorized = true
 				break
 			}

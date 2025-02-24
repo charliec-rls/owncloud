@@ -56,6 +56,9 @@ func (s *svc) CreateOCMShare(ctx context.Context, req *ocm.CreateOCMShareRequest
 	if err != nil {
 		return nil, errors.Wrap(err, "gateway: error calling CreateOCMShare")
 	}
+	if res.GetStatus().GetCode() != rpc.Code_CODE_OK {
+		return res, nil
+	}
 
 	// add a grant to the storage provider so the share can efficiently be listed
 	// the grant does not grant any permissions. access is granted by the OCM link token
@@ -85,9 +88,35 @@ func (s *svc) RemoveOCMShare(ctx context.Context, req *ocm.RemoveOCMShareRequest
 		}, nil
 	}
 
+	getShareRes, err := c.GetOCMShare(ctx, &ocm.GetOCMShareRequest{
+		Ref: req.Ref,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "gateway: error calling GetOCMShare")
+	}
+	if getShareRes.Status.Code != rpc.Code_CODE_OK {
+		res := &ocm.RemoveOCMShareResponse{
+			Status: status.NewInternal(ctx,
+				"error getting ocm share when committing to the storage"),
+		}
+		return res, nil
+	}
+	share := getShareRes.Share
+
 	res, err := c.RemoveOCMShare(ctx, req)
 	if err != nil {
 		return nil, errors.Wrap(err, "gateway: error calling RemoveOCMShare")
+	}
+
+	// remove the grant from the storage provider
+	status, err := s.removeGrant(ctx, share.GetResourceId(), share.GetGrantee(), share.GetAccessMethods()[0].GetWebdavOptions().GetPermissions(), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "gateway: error removing grant from storage")
+	}
+	if status.Code != rpc.Code_CODE_OK {
+		return &ocm.RemoveOCMShareResponse{
+			Status: status,
+		}, err
 	}
 
 	return res, nil
