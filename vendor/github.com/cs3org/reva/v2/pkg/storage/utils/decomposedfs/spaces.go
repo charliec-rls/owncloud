@@ -39,6 +39,7 @@ import (
 	ocsconv "github.com/cs3org/reva/v2/pkg/conversions"
 	ctxpkg "github.com/cs3org/reva/v2/pkg/ctx"
 	"github.com/cs3org/reva/v2/pkg/errtypes"
+	"github.com/cs3org/reva/v2/pkg/events"
 	"github.com/cs3org/reva/v2/pkg/rgrpc/status"
 	"github.com/cs3org/reva/v2/pkg/rgrpc/todo/pool"
 	sdk "github.com/cs3org/reva/v2/pkg/sdk/common"
@@ -50,6 +51,7 @@ import (
 	"github.com/cs3org/reva/v2/pkg/storagespace"
 	"github.com/cs3org/reva/v2/pkg/utils"
 	"github.com/pkg/errors"
+	"github.com/shamaton/msgpack/v2"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -744,12 +746,58 @@ func (fs *Decomposedfs) DeleteStorageSpace(ctx context.Context, req *provider.De
 			return err
 		}
 
-		// remove space metadata
-		if err := os.RemoveAll(fs.getSpaceRoot(spaceID)); err != nil {
+		root := fs.getSpaceRoot(spaceID)
+
+		// walkfn will delete the blob if the node has one
+		walkfn := func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if filepath.Ext(path) != ".mpk" {
+				return nil
+			}
+
+			b, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			m := map[string][]byte{}
+			if err := msgpack.Unmarshal(b, &m); err != nil {
+				return err
+			}
+
+			bid := m["user.ocis.blobid"]
+			if string(bid) == "" {
+				return nil
+			}
+
+			if err := fs.tp.DeleteBlob(&node.Node{
+				BlobID:  string(bid),
+				SpaceID: spaceID,
+			}); err != nil {
+				return err
+			}
+
+			// remove .mpk file so subsequent attempts will not try to delete the blob again
+			return os.Remove(path)
+		}
+
+		// This is deletes all blobs of the space
+		// NOTE: This isn't needed when no s3 is used, but we can't differentiate that here...
+		if err := filepath.Walk(root, walkfn); err != nil {
 			return err
 		}
 
-		// TODO remove space blobs with s3 backend by adding a purge method to the Blobstore interface
+		// remove space metadata
+		if err := os.RemoveAll(root); err != nil {
+			return err
+		}
+
+		// try removing the space root node
+		// Note that this will fail when there are other spaceids starting with the same two digits.
+		_ = os.Remove(filepath.Dir(root))
 
 		return nil
 	}
@@ -858,7 +906,10 @@ func (fs *Decomposedfs) StorageSpaceFromNode(ctx context.Context, n *node.Node, 
 			// This way we don't have to have a cron job checking the grants in regular intervals.
 			// The tradeof obviously is that this code is here.
 			if isGrantExpired(g) {
-				if err := n.DeleteGrant(ctx, g, true); err != nil {
+				var errDeleteGrant, errIndexRemove error
+
+				errDeleteGrant = n.DeleteGrant(ctx, g, true)
+				if errDeleteGrant != nil {
 					sublog.Error().Err(err).Str("grantee", id).
 						Msg("failed to delete expired space grant")
 				}
@@ -867,16 +918,39 @@ func (fs *Decomposedfs) StorageSpaceFromNode(ctx context.Context, n *node.Node, 
 					switch {
 					case g.Grantee.Type == provider.GranteeType_GRANTEE_TYPE_USER:
 						// remove from user index
-						if err := fs.userSpaceIndex.Remove(g.Grantee.GetUserId().GetOpaqueId(), n.SpaceID); err != nil {
+						errIndexRemove = fs.userSpaceIndex.Remove(g.Grantee.GetUserId().GetOpaqueId(), n.SpaceID)
+						if errIndexRemove != nil {
 							sublog.Error().Err(err).Str("grantee", id).
 								Msg("failed to delete expired user space index")
 						}
 					case g.Grantee.Type == provider.GranteeType_GRANTEE_TYPE_GROUP:
 						// remove from group index
-						if err := fs.groupSpaceIndex.Remove(g.Grantee.GetGroupId().GetOpaqueId(), n.SpaceID); err != nil {
+						errIndexRemove = fs.groupSpaceIndex.Remove(g.Grantee.GetGroupId().GetOpaqueId(), n.SpaceID)
+						if errIndexRemove != nil {
 							sublog.Error().Err(err).Str("grantee", id).
 								Msg("failed to delete expired group space index")
 						}
+					}
+				}
+
+				// publish SpaceMembershipExpired event
+				if errDeleteGrant == nil && errIndexRemove == nil {
+					ev := events.SpaceMembershipExpired{
+						SpaceOwner: n.SpaceOwnerOrManager(ctx),
+						SpaceID:    &provider.StorageSpaceId{OpaqueId: n.SpaceID},
+						SpaceName:  sname,
+						ExpiredAt:  time.Unix(int64(g.Expiration.Seconds), int64(g.Expiration.Nanos)),
+						Timestamp:  utils.TSNow(),
+					}
+					switch {
+					case g.Grantee.Type == provider.GranteeType_GRANTEE_TYPE_USER:
+						ev.GranteeUserID = g.Grantee.GetUserId()
+					case g.Grantee.Type == provider.GranteeType_GRANTEE_TYPE_GROUP:
+						ev.GranteeGroupID = g.Grantee.GetGroupId()
+					}
+					err = events.Publish(ctx, fs.stream, ev)
+					if err != nil {
+						sublog.Error().Err(err).Msg("error publishing SpaceMembershipExpired event")
 					}
 				}
 
